@@ -27,20 +27,16 @@ func (c *twoLevelClient) Rename(oldKey string, newKey string, expiration time.Du
 }
 
 // Set stores the given value in both in-memory and external cache.
-// Skip storing the value in external cache if the same value already exists in memory to avoid requesting external cache.
 func (c *twoLevelClient) Set(item *Item) error {
-	has, err := c.inMemoryCache.HasSame(item.Key, item.Object)
-	if has {
-		return nil
+	if err := c.externalCache.Set(item); err != nil {
+		return err
 	}
-	if err != nil {
-		log.Warnf("Failed to check key '%s' in in-memory cache: %v", item.Key, err)
-	}
-	err = c.inMemoryCache.Set(item)
+
+	err := c.inMemoryCache.Set(item)
 	if err != nil {
 		log.Warnf("Failed to save key '%s' in in-memory cache: %v", item.Key, err)
 	}
-	return c.externalCache.Set(item)
+	return nil
 }
 
 // Get returns cache value from in-memory cache if it present. Otherwise loads it from external cache and persists
